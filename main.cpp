@@ -1,27 +1,38 @@
+/*			HEADER
+*******************************************************************
+***								***
+*** Programmer: Chikkappagari Sreekanth				***
+***								***
+*** File: main.cpp 						***
+***								***
+*** Date: 07/02/2019						***
+***								***
+*******************************************************************
+*/
 #include<iostream>
-#include"temperaturesensor.h"
-#include"temperaturemonitor.h"
-#include"acmonitor.h"
+#include"temperature_sensor.h"
+#include"temperature_monitor.h"
+#include"ac_monitor.h"
 using namespace std;
 
 int main() {
-	CTemperatureSensor *ptr;
-	ptr = new CTemperatureSensor();	
-	
-	CTemperatureMonitor *tptr;
-	tptr = new CTemperatureMonitor(1);
+    CTemperatureSensor *ptr;
+    ptr = new CTemperatureSensor();	
 
-	CAcMonitor *aptr;
-	aptr = new CAcMonitor(4);
+    CTemperatureMonitor *tptr;
+    tptr = new CTemperatureMonitor(1);
+ 
+    CAcMonitor *aptr;
+    aptr = new CAcMonitor(4);
 	
-	ptr->subscribed(aptr);
-	ptr->subscribed(tptr);
-//	ptr->unsubscribed(tptr);
+    ptr->sub_subscribed(aptr);
+    ptr->sub_subscribed(tptr);
+//  ptr->sub_unsubscribed(tptr);
+
+    ptr->sensor_setTemperature();
+    ptr->sensor_assignData();
 	
-	ptr->setTemperature();
-	ptr->assignData();
-	
-	return 0;
+    return 0;
 }
 
 

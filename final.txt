@@ -1,8 +1,0 @@
-AC Level : Warm
-Degree : C	Temperature : 35.7778
-AC Level : Warm
-Degree : C	Temperature : 35.7778
-AC Level : Warm
-Degree : C	Temperature : 35.7778
-AC Level : Warm
-Degree : C	Temperature : 35.7778

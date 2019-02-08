@@ -17,7 +17,7 @@ INCLUDE=-I/usr/include
 
 LIBS=	-pthread
 
-SOURCES=	./main.cpp ./acmonitor.cpp ./temperaturemonitor.cpp ./temperaturesensor.cpp ./maincontroller.cpp
+SOURCES=	./main.cpp ./ac_monitor.cpp ./temperature_monitor.cpp ./temperature_sensor.cpp ./main_controller.cpp
 
 OBJECTS:= $(SOURCES:%.cpp=$(OBJDIR)/%.o)
 

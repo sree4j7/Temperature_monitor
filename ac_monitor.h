@@ -3,23 +3,28 @@
 ***								***
 *** Programmer: Chikkappagari Sreekanth				***
 ***								***
-*** File: subject.h						***
+*** File: ac_monitor.h						***
 ***								***
 *** Date: 07/02/2019						***
 ***								***
 *******************************************************************
 */
-#ifndef SUBJECT_HEADER
-#define SUBJECT_HEADER 
+#ifndef AC_MONITOR_HEADER
+#define AC_MONITOR_HEADER
 
 #include<iostream>
 #include"observer.h"
-class CSubject {
+class CAcMonitor:public CObserver {
+    private:
+	int m_nId;
+	float m_fTemperature;
+	char m_szDegree;
     public:
-        virtual void sub_subscribed(CObserver *observer) = 0;
-        virtual void sub_unsubscribed(CObserver *observer) = 0;
-        virtual void sub_notify(void) = 0;
+	CAcMonitor( int );
+	void obs_update(char, float )override;
+	static void* ac_threadAc( void * );
+	void ac_condition( void );
+	~CAcMonitor();
 };
 
 #endif
-

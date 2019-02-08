@@ -3,19 +3,23 @@
 ***								***
 *** Programmer: Chikkappagari Sreekanth				***
 ***								***
-*** File: observer.h						***
+*** File: main_controller.h					***	
 ***								***
 *** Date: 07/02/2019						***
 ***								***
 *******************************************************************
 */
-#ifndef OBSERVER_HEADER
-#define OBSERVER_HEADER
-
+#ifndef MAIN_CONTROLLER_HEADER
+#define MAIN_CONTROLLER_HEADER
+#include<string>
 #include<iostream>
-class CObserver {
+#include"temperature_monitor.h"
+#include"ac_monitor.h"
+using namespace std;
+class CMainController{
     public:
-	virtual void obs_update(char degree, float temperature) = 0;
+	static void mainController_displayAc( string );
+        static void mainController_displayTemp( char, float );
 };
 
 #endif
