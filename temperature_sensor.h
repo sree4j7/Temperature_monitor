@@ -28,7 +28,7 @@ class CTemperatureSensor:public CSubject {
         void sub_subscribed(CObserver *observer)override;
         void sub_unsubscribed(CObserver *observer)override;
         void sub_notify()override;
-        void sensor_setTemperature(void);
+        bool sensor_setTemperature(void);
         void sensor_assignData(void);
 	~CTemperatureSensor();
 };

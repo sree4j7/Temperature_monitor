@@ -22,8 +22,9 @@ class CTemperatureMonitor:public CObserver {
     public:
 	CTemperatureMonitor( );
 	CTemperatureMonitor( int );
+	CTemperatureMonitor( float, char, int );
 	void obs_update( char, float )override;
-	void temperature_convert( void );
+	float temperature_convert( void );
 	static void* temperature_thread( void * );
 	~CTemperatureMonitor( );
 };

@@ -18,6 +18,13 @@ CAcMonitor::CAcMonitor( int nTemp )
 {
     m_nId = nTemp;
 }
+
+CAcMonitor::CAcMonitor(float fTemp, char szCh, int nNum)
+{
+    m_fTemperature = fTemp;
+    m_szDegree = szCh;
+    m_nId = nNum;    
+}
  /*
  *  CAcMonitor::update - This function is called from temperature sensor class
  *  to process the temperature and created a thread for calling function
@@ -75,6 +82,7 @@ void CAcMonitor::ac_condition( void )
 
     }
     CMainController::mainController_displayAc( strCondition );
+    //return strCondition;
 }
 
 CAcMonitor::~CAcMonitor()

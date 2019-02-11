@@ -1,7 +1,7 @@
 #include<iostream>
 #include<gtest/gtest.h>
-#include"class.h"
-
+#include"temperature_monitor.h"
+//#include"ac_monitor.h"
 int main (int argc, char ** argv)
 {
 

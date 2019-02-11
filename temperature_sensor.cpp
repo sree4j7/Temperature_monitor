@@ -38,7 +38,7 @@ void CTemperatureSensor::sub_notify(void) {
 
 /***** Fetching the data from the file.txt *****/
 vector< pair <char,float> > vect_project;
-void CTemperatureSensor::sensor_setTemperature(void) 
+bool CTemperatureSensor::sensor_setTemperature(void) 
 {
     char szCh;
     float fTemp;
@@ -49,7 +49,7 @@ void CTemperatureSensor::sensor_setTemperature(void)
     if(fin.fail())
     {
 	cout << "File is not preaent" << endl;
-	return;
+	return 0;
     }
    while(!fin.eof())
    {    
@@ -63,6 +63,7 @@ void CTemperatureSensor::sensor_setTemperature(void)
 	    vect_project.push_back(make_pair(szCh,fTemp));
 	}
     }
+    return true;
 }
 
 void CTemperatureSensor::sensor_assignData(void)

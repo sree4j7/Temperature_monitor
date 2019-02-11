@@ -14,6 +14,18 @@
 #include<pthread.h>
 using namespace std;
 
+CTemperatureMonitor::CTemperatureMonitor(int nTemp)
+{
+	m_nId = nTemp;
+}
+
+CTemperatureMonitor::CTemperatureMonitor(float fTemp, char szCh, int nNum)
+{
+    m_fTemperature = fTemp;
+    m_szDegree = szCh;
+    m_nId = nNum;
+}
+
 /*** Update the data in temperature monitor ****/
 void CTemperatureMonitor::obs_update( char szCh, float fTemp){
     m_fTemperature = fTemp;
@@ -33,7 +45,7 @@ void* CTemperatureMonitor::temperature_thread( void *arg )
 }
 
 /**** Convert the temperature *****/
-void CTemperatureMonitor::temperature_convert(){
+float CTemperatureMonitor::temperature_convert(){
     char szConvertedDegree;
     float fConvertedTemperature;
     cout << "user id : " << m_nId << endl;
@@ -54,14 +66,10 @@ void CTemperatureMonitor::temperature_convert(){
 	cout << "Invalid key to convert" << endl;
     }
 
+    return fConvertedTemperature;	
     CMainController::mainController_displayTemp( szConvertedDegree, fConvertedTemperature );
-	
 }
 
-CTemperatureMonitor::CTemperatureMonitor(int nTemp)
-{
-	m_nId = nTemp;
-}
 
 CTemperatureMonitor::~CTemperatureMonitor()
 {

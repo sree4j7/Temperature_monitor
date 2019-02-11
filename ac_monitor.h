@@ -14,6 +14,8 @@
 
 #include<iostream>
 #include"observer.h"
+#include<string>
+#include"observer.h"
 class CAcMonitor:public CObserver {
     private:
 	int m_nId;
@@ -21,6 +23,7 @@ class CAcMonitor:public CObserver {
 	char m_szDegree;
     public:
 	CAcMonitor( int );
+	CAcMonitor( float, char, int );
 	void obs_update(char, float )override;
 	static void* ac_threadAc( void * );
 	void ac_condition( void );
