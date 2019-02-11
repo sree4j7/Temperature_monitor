@@ -20,7 +20,7 @@ class CTemperatureMonitor:public CObserver {
 	float m_fTemperature;
 	char m_szDegree;
     public:
-	CTemperatureMonitor( );
+	CTemperatureMonitor( ) = default;
 	CTemperatureMonitor( int );
 	CTemperatureMonitor( float, char, int );
 	void obs_update( char, float )override;

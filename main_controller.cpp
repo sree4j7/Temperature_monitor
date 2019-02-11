@@ -21,14 +21,17 @@ void CMainController::mainController_displayAc( string strCondition )
     ofstream fout;
     fout.open( "final.txt", ios::out | ios::app );
     fout << "AC Level : " << strCondition << endl;
+    fout.close();
 }
 
 /**** Putting the converted temperature data into file ****/
-void CMainController::mainController_displayTemp( char szDeg, float fTemp )
+bool CMainController::mainController_displayTemp( char szDeg, float fTemp )
 {
     ofstream fout;
     fout.open("final.txt", ios::out | ios::app );
     fout  << "Degree : " << szDeg << "\t" << "Temperature : " << fTemp  << endl; 
+    fout.close();
+    return true;
 }
 
 

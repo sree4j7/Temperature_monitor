@@ -7,7 +7,7 @@ int TestAcDummy::mArgc = 0;
 char** TestAcDummy::mArgs = NULL;
 CAcMonitor* TestAcDummy::pAc = NULL;
 
-TestAcDummy::TestAcDummy(void)
+TestAcDummy::TestAcDummy( void )
 {
 
 }
@@ -48,13 +48,16 @@ void TestAcDummy::TearDown(void)
 
 TEST_F ( TestAcDummy, level_1 )
 {
-    string s = "Cool";
-    ASSERT_EQ( s, pAc->ac_condition() );
+    bool bRet = pAc->ac_condition();
+    cout << "Return Value " << bRet <<endl;
+    ASSERT_TRUE( bRet );
+   // string s = "Cool";
+   // ASSERT_STREQ( s, pAc->ac_condition() );
 }
 
-TEST_F ( TestAcDummy, level_2 )
+/*TEST_F ( TestAcDummy, level_2 )
 {
     string s = "Medium";
-    ASSERT_EQ( s, pAc->ac_condition() );
-}
+    ASSERT_STREQ( s, pAc->ac_condition() );
+}*/
 

@@ -19,7 +19,7 @@ using namespace std;
 class CMainController{
     public:
 	static void mainController_displayAc( string );
-        static void mainController_displayTemp( char, float );
+        static bool mainController_displayTemp( char, float );
 };
 
 #endif

@@ -26,7 +26,7 @@ class CAcMonitor:public CObserver {
 	CAcMonitor( float, char, int );
 	void obs_update(char, float )override;
 	static void* ac_threadAc( void * );
-	void ac_condition( void );
+	bool ac_condition( );
 	~CAcMonitor();
 };
 

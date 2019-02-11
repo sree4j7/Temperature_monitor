@@ -50,5 +50,5 @@ TEST_F(TestSensorDummy, File_open_1 )
 {
 	bool bRet = pSensor->sensor_setTemperature();
 	cout << "Return vlaue " << bRet << endl;
-        ASSERT_FALSE( bRet );
+        ASSERT_TRUE( bRet );
 }

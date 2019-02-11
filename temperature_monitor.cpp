@@ -66,8 +66,8 @@ float CTemperatureMonitor::temperature_convert(){
 	cout << "Invalid key to convert" << endl;
     }
 
-    return fConvertedTemperature;	
     CMainController::mainController_displayTemp( szConvertedDegree, fConvertedTemperature );
+    return fConvertedTemperature;	
 }
 
 

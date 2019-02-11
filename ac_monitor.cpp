@@ -46,7 +46,7 @@ void* CAcMonitor::ac_threadAc( void *arg )
     return 0;
 }
 
-void CAcMonitor::ac_condition( void )
+bool CAcMonitor::ac_condition( )
 {
     cout << "user id : " << m_nId << endl;
     string strCondition;
@@ -79,10 +79,9 @@ void CAcMonitor::ac_condition( void )
 	    cout << "AC Level : Warm" << endl;
 	    strCondition = "Warm";
 	}
-
     }
     CMainController::mainController_displayAc( strCondition );
-    //return strCondition;
+    return true;
 }
 
 CAcMonitor::~CAcMonitor()

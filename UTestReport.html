@@ -1,0 +1,86 @@
+<html>
+<head>
+<style>
+table, th, td {
+    border: 1px solid black;
+    border-collapse:collapse;
+}
+th, td {
+    padding: 5px;
+}
+</style>
+<h1>
+Demo Unit Test Report - v1.0
+</h1>
+</head>
+<body>
+
+<script>
+if (window.XMLHttpRequest)
+  {// code for IE7+, Firefox, Chrome, Opera, Safari
+  xmlhttp=new XMLHttpRequest();
+  }
+else
+  {// code for IE6, IE5
+  xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+  }
+xmlhttp.open("GET","UTReport.xml",false);
+xmlhttp.send();
+xmlDoc=xmlhttp.responseXML; 
+
+document.write("<table><tr><th>Test Suite</th><th>Test Cases</th><th>Test Case Count</th><th>Failures</th></tr>");
+var testsuites = xmlDoc.getElementsByTagName("testsuites");
+var testsuite= xmlDoc.getElementsByTagName("testsuite");
+tot_tests = 0;
+tot_failures = 0;
+for (i=0;i<testsuite.length;i++)
+  { 
+  var testSuiteName= testsuite[i].attributes[0].textContent;
+  var testCaseCount = testsuite[i].attributes[1].textContent;
+  var testCaseFailures = testsuite[i].attributes[2].textContent;
+
+  //No Disabled tests, in report
+  if(testSuiteName.startsWith("DISABLED_")){
+	//document.write(testSuiteName);
+	continue;
+  }
+
+  document.write("<tr><td>");
+  document.write(testSuiteName);
+
+  document.write("</td><td>");
+
+  //test cases list
+  document.write("<table>");
+  var testCaseArr = testsuite[i].getElementsByTagName("testcase");
+  for(j=0; j<testCaseArr.length ; j++){
+    document.write("<tr><td>");
+    //document.write("test2");
+	document.write(testCaseArr[j].attributes[0].textContent);
+    document.write("</tr></td>");
+  }
+  document.write("</table>");
+
+  document.write("</td><td>");
+  document.write(testCaseCount);
+  document.write("</td><td>");
+
+  document.write(testCaseFailures);
+  document.write("</td></tr>");
+
+  tot_tests = tot_tests + parseInt(testCaseCount);
+  tot_failures = tot_failures + parseInt(testCaseFailures);
+  }
+document.write("</table>");
+
+document.write("<br><B>Total Test Cases: ");
+document.write(tot_tests);
+document.write("<br><B>Total Failures  : ");
+document.write(tot_failures);
+
+</script>
+
+</body>
+</html>
+
+

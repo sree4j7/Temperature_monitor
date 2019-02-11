@@ -23,7 +23,7 @@ class CTemperatureSensor:public CSubject {
 	float m_fTemperature;
 	char m_szDegree;
     public:
-	CTemperatureSensor();
+	CTemperatureSensor() = default;
         vector<CObserver *> observers;
         void sub_subscribed(CObserver *observer)override;
         void sub_unsubscribed(CObserver *observer)override;

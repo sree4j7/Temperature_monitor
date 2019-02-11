@@ -49,13 +49,20 @@ bool CTemperatureSensor::sensor_setTemperature(void)
     if(fin.fail())
     {
 	cout << "File is not preaent" << endl;
-	return 0;
+	return false;
     }
    while(!fin.eof())
    {    
 	getline(fin,strTemp,':')&&getline(fin,strDeg);
 	if(fin)
 	{
+	    try{
+		std::stof(strTemp);
+	    }
+	    catch(...){
+		cout << "Invalid datatype " << endl;
+		return false;
+	    } 
             fTemp = std::stof(strTemp);
 	    char szChar_array[strDeg.length()+1];
 	    strcpy(szChar_array, strDeg.c_str());
@@ -76,12 +83,3 @@ void CTemperatureSensor::sensor_assignData(void)
     }
 }
 
-CTemperatureSensor::CTemperatureSensor()
-{
-
-}
-
-CTemperatureSensor::~CTemperatureSensor()
-{
-
-}
