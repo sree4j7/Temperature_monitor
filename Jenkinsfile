@@ -302,7 +302,7 @@ set +e
 rc=$?
 set -e
 
-if [ "$rc" -ne 0 ]; then
+if [ "$rc" -eq 126 ] || [ "$rc" -eq 127 ]; then
     echo "Direct execution failed with code $rc, retrying from /tmp..."
     TMP_BIN="/tmp/UT.Binary.$$.bin"
     cp ./UT.Binary "$TMP_BIN"
@@ -331,11 +331,15 @@ if [ "$rc" -ne 0 ]; then
 fi
 
 if [ "$rc" -ne 0 ]; then
-    echo "ERROR: UT.Binary exists but could not be executed (exit code $rc)."
-    echo "Host architecture:"
-    uname -m || true
-    echo "Binary metadata:"
-    file ./UT.Binary || true
+    if [ "$rc" -eq 126 ] || [ "$rc" -eq 127 ]; then
+        echo "ERROR: UT.Binary exists but could not be executed (exit code $rc)."
+        echo "Host architecture:"
+        uname -m || true
+        echo "Binary metadata:"
+        file ./UT.Binary || true
+    else
+        echo "Unit tests failed with exit code $rc."
+    fi
     exit $rc
 fi
 '''
