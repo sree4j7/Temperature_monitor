@@ -295,22 +295,48 @@ if [ ! -f ./UT.Binary ]; then
     exit 1
 fi
 
-export GTEST_OUTPUT="xml:./UTReport.xml"
+export GTEST_OUTPUT="xml:${PWD}/UTReport.xml"
 
-if ./UT.Binary >/dev/null 2>&1; then
-    ./UT.Binary
-elif [ -x "./.ci/toolchain/lib/ld-musl-x86_64.so.1" ]; then
-    ./.ci/toolchain/lib/ld-musl-x86_64.so.1 ./UT.Binary
-elif [ -x "./.ci/toolchain/x86_64-linux-musl/lib/ld-musl-x86_64.so.1" ]; then
-    ./.ci/toolchain/x86_64-linux-musl/lib/ld-musl-x86_64.so.1 ./UT.Binary
-else
-    echo "ERROR: UT.Binary exists but could not be executed."
+set +e
+./UT.Binary
+rc=$?
+set -e
+
+if [ "$rc" -ne 0 ]; then
+    echo "Direct execution failed with code $rc, retrying from /tmp..."
+    TMP_BIN="/tmp/UT.Binary.$$.bin"
+    cp ./UT.Binary "$TMP_BIN"
+    chmod +x "$TMP_BIN"
+
+    set +e
+    "$TMP_BIN"
+    rc=$?
+    set -e
+
+    if [ "$rc" -ne 0 ] && [ -x "./.ci/toolchain/lib/ld-musl-x86_64.so.1" ]; then
+        set +e
+        ./.ci/toolchain/lib/ld-musl-x86_64.so.1 "$TMP_BIN"
+        rc=$?
+        set -e
+    fi
+
+    if [ "$rc" -ne 0 ] && [ -x "./.ci/toolchain/x86_64-linux-musl/lib/ld-musl-x86_64.so.1" ]; then
+        set +e
+        ./.ci/toolchain/x86_64-linux-musl/lib/ld-musl-x86_64.so.1 "$TMP_BIN"
+        rc=$?
+        set -e
+    fi
+
+    rm -f "$TMP_BIN" || true
+fi
+
+if [ "$rc" -ne 0 ]; then
+    echo "ERROR: UT.Binary exists but could not be executed (exit code $rc)."
+    echo "Host architecture:"
+    uname -m || true
     echo "Binary metadata:"
     file ./UT.Binary || true
-    echo "Execution error output:"
-    ./UT.Binary > /tmp/ut.out 2> /tmp/ut.err || true
-    cat /tmp/ut.err || true
-    exit 1
+    exit $rc
 fi
 '''
                     } else {
