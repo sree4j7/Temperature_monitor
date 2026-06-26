@@ -9,6 +9,7 @@ pipeline {
         BUILD_MODE = 'host'
         BUILD_IMAGE = 'gcc:13'
         GTEST_DIR = '.ci/googletest'
+        PORTABLE_TC_DIR = '.ci/toolchain'
         CXX_BIN = 'g++'
         CXX_LINK_FLAGS = ''
     }
@@ -101,7 +102,47 @@ command -v make >/dev/null 2>&1 && command -v g++ >/dev/null 2>&1
                                 sh 'docker pull ${BUILD_IMAGE}'
                                 echo 'Host toolchain unavailable and no install privileges; using Docker build mode.'
                             } else {
-                                error('No usable C++ toolchain found. Jenkins user cannot install packages and Docker is unavailable. Preinstall make/g++/gtest on the agent, or enable Docker access for Jenkins.')
+                                def portableReady = sh(script: '''#!/bin/sh
+set -e
+
+TC_DIR="${PORTABLE_TC_DIR}"
+ARCHIVE=".ci/x86_64-linux-musl-native.tgz"
+URL="https://musl.cc/x86_64-linux-musl-native.tgz"
+
+mkdir -p .ci
+
+if [ -x "${TC_DIR}/bin/g++" ]; then
+    exit 0
+fi
+
+if command -v curl >/dev/null 2>&1; then
+    curl -L --fail -o "${ARCHIVE}" "${URL}"
+elif command -v wget >/dev/null 2>&1; then
+    wget -O "${ARCHIVE}" "${URL}"
+elif command -v python3 >/dev/null 2>&1; then
+    python3 - <<'PY'
+import urllib.request
+urllib.request.urlretrieve('https://musl.cc/x86_64-linux-musl-native.tgz', '.ci/x86_64-linux-musl-native.tgz')
+PY
+else
+    exit 4
+fi
+
+rm -rf "${TC_DIR}" .ci/x86_64-linux-musl-native
+tar -xzf "${ARCHIVE}" -C .ci
+mv .ci/x86_64-linux-musl-native "${TC_DIR}"
+test -x "${TC_DIR}/bin/g++"
+''', returnStatus: true)
+
+                                if (portableReady == 0) {
+                                    env.BUILD_MODE = 'portable_gpp'
+                                    env.CXX_BIN = "${env.WORKSPACE}/${env.PORTABLE_TC_DIR}/bin/g++"
+                                    env.CXX_LINK_FLAGS = ''
+                                    sh '${CXX_BIN} --version | head -n 1'
+                                    echo 'Using portable user-space C++ toolchain.'
+                                } else {
+                                    error('No usable C++ toolchain found. Jenkins user cannot install packages, Docker is unavailable, and portable toolchain bootstrap failed. Preinstall make/g++/gtest on the agent, or enable Docker/sudo/network access for Jenkins.')
+                                }
                             }
                         }
                     }
@@ -118,7 +159,7 @@ command -v make >/dev/null 2>&1 && command -v g++ >/dev/null 2>&1
   -w /workspace \
   ${BUILD_IMAGE} \
   bash -lc "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y make libgtest-dev && make clean && make"'''
-                    } else if (env.BUILD_MODE == 'host_gpp') {
+                    } else if (env.BUILD_MODE == 'host_gpp' || env.BUILD_MODE == 'portable_gpp') {
                         sh '''#!/bin/sh
 set -e
 mkdir -p obj
@@ -146,7 +187,7 @@ ${CXX_BIN} -I/usr/include -L/usr/lib -o Binary obj/main.o obj/ac_monitor.o obj/t
   -w /workspace \
   ${BUILD_IMAGE} \
   bash -lc "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y make libgtest-dev && make -f Makefile.UnitTest clean && make -f Makefile.UnitTest"'''
-                    } else if (env.BUILD_MODE == 'host_gpp') {
+                    } else if (env.BUILD_MODE == 'host_gpp' || env.BUILD_MODE == 'portable_gpp') {
                         sh '''#!/bin/sh
 set -e
 
