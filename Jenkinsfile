@@ -10,6 +10,7 @@ pipeline {
         BUILD_IMAGE = 'gcc:13'
         GTEST_DIR = '.ci/googletest'
         CXX_BIN = 'g++'
+        CXX_LINK_FLAGS = ''
     }
 
     stages {
@@ -23,21 +24,25 @@ elif command -v c++ >/dev/null 2>&1; then
     echo c++
 elif command -v clang++ >/dev/null 2>&1; then
     echo clang++
+elif command -v gcc >/dev/null 2>&1; then
+    echo gcc
 else
     echo none
 fi
 ''', returnStdout: true).trim()
 
-                    def hostMakeReady = (sh(script: "command -v make >/dev/null 2>&1 && command -v ${compilerBin} >/dev/null 2>&1", returnStatus: true) == 0)
+                    def hostMakeReady = (compilerBin != 'gcc' && sh(script: "command -v make >/dev/null 2>&1 && command -v ${compilerBin} >/dev/null 2>&1", returnStatus: true) == 0)
                     def hostGppReady = (compilerBin != 'none')
 
                     if (hostMakeReady) {
                         env.CXX_BIN = compilerBin
+                        env.CXX_LINK_FLAGS = ''
                         env.BUILD_MODE = 'host_make'
                         sh 'make --version | head -n 1'
                         sh '${CXX_BIN} --version | head -n 1'
                     } else if (hostGppReady) {
                         env.CXX_BIN = compilerBin
+                        env.CXX_LINK_FLAGS = (compilerBin == 'gcc') ? '-lstdc++' : ''
                         env.BUILD_MODE = 'host_gpp'
                         sh '${CXX_BIN} --version | head -n 1'
                     } else {
@@ -86,6 +91,7 @@ command -v make >/dev/null 2>&1 && command -v g++ >/dev/null 2>&1
 
                         if (installed == 0) {
                             env.CXX_BIN = 'g++'
+                            env.CXX_LINK_FLAGS = ''
                             env.BUILD_MODE = 'host_make'
                             sh 'make --version | head -n 1; g++ --version | head -n 1'
                         } else {
@@ -121,7 +127,7 @@ ${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c ac_monitor.cpp -
 ${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c temperature_monitor.cpp -o obj/temperature_monitor.o
 ${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c temperature_sensor.cpp -o obj/temperature_sensor.o
 ${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c main_controller.cpp -o obj/main_controller.o
-${CXX_BIN} -I/usr/include -L/usr/lib -o Binary obj/main.o obj/ac_monitor.o obj/temperature_monitor.o obj/temperature_sensor.o obj/main_controller.o -pthread
+${CXX_BIN} -I/usr/include -L/usr/lib -o Binary obj/main.o obj/ac_monitor.o obj/temperature_monitor.o obj/temperature_sensor.o obj/main_controller.o -pthread ${CXX_LINK_FLAGS}
 '''
                     } else {
                         sh 'make clean'
@@ -181,7 +187,7 @@ ${CXX_BIN} -I/usr/include ${GTEST_INC} -L/usr/lib -o UT.Binary \
   objunit/ac_monitor.o \
   objunit/ac_monitor_test.o \
   objunit/gtest-all.o \
-  -pthread
+    -pthread ${CXX_LINK_FLAGS}
 '''
                     } else {
                         sh 'make -f Makefile.UnitTest clean'
