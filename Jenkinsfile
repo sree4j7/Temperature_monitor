@@ -216,36 +216,37 @@ mkdir -p obj
                         sh 'make -f Makefile.UnitTest clean'
                         sh 'make -f Makefile.UnitTest'
                     } else {
+                        def gtestDir = env.GTEST_DIR?.trim() ? env.GTEST_DIR.trim() : '.ci/googletest'
                         sh """#!/bin/sh
 set -e
 
 mkdir -p objunit
 mkdir -p .ci
 
-if [ ! -d "${GTEST_DIR}" ]; then
+if [ ! -d "${gtestDir}" ]; then
     if command -v git >/dev/null 2>&1; then
-        git clone --depth 1 https://github.com/google/googletest.git "${GTEST_DIR}"
+        git clone --depth 1 https://github.com/google/googletest.git "${gtestDir}"
     else
         echo "ERROR: git is required to fetch GoogleTest source in host_gpp mode."
         exit 1
     fi
 fi
 
-GTEST_INC="-I${GTEST_DIR}/googletest/include -I${GTEST_DIR}/googletest"
-COMMON_FLAGS="-g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include ${GTEST_INC}"
+GTEST_INC="-I${gtestDir}/googletest/include -I${gtestDir}/googletest"
+COMMON_FLAGS="-g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include \$GTEST_INC"
 
-"${cxx}" ${COMMON_FLAGS} -c test_main.cpp -o objunit/test_main.o
-"${cxx}" ${COMMON_FLAGS} -c main_controller.cpp -o objunit/main_controller.o
-"${cxx}" ${COMMON_FLAGS} -c main_controller_test.cpp -o objunit/main_controller_test.o
-"${cxx}" ${COMMON_FLAGS} -c temperature_monitor.cpp -o objunit/temperature_monitor.o
-"${cxx}" ${COMMON_FLAGS} -c temp_monitor_test.cpp -o objunit/temp_monitor_test.o
-"${cxx}" ${COMMON_FLAGS} -c temperature_sensor.cpp -o objunit/temperature_sensor.o
-"${cxx}" ${COMMON_FLAGS} -c temp_sensor_test.cpp -o objunit/temp_sensor_test.o
-"${cxx}" ${COMMON_FLAGS} -c ac_monitor.cpp -o objunit/ac_monitor.o
-"${cxx}" ${COMMON_FLAGS} -c ac_monitor_test.cpp -o objunit/ac_monitor_test.o
-"${cxx}" ${COMMON_FLAGS} -c ${GTEST_DIR}/googletest/src/gtest-all.cc -o objunit/gtest-all.o
+"${cxx}" \$COMMON_FLAGS -c test_main.cpp -o objunit/test_main.o
+"${cxx}" \$COMMON_FLAGS -c main_controller.cpp -o objunit/main_controller.o
+"${cxx}" \$COMMON_FLAGS -c main_controller_test.cpp -o objunit/main_controller_test.o
+"${cxx}" \$COMMON_FLAGS -c temperature_monitor.cpp -o objunit/temperature_monitor.o
+"${cxx}" \$COMMON_FLAGS -c temp_monitor_test.cpp -o objunit/temp_monitor_test.o
+"${cxx}" \$COMMON_FLAGS -c temperature_sensor.cpp -o objunit/temperature_sensor.o
+"${cxx}" \$COMMON_FLAGS -c temp_sensor_test.cpp -o objunit/temp_sensor_test.o
+"${cxx}" \$COMMON_FLAGS -c ac_monitor.cpp -o objunit/ac_monitor.o
+"${cxx}" \$COMMON_FLAGS -c ac_monitor_test.cpp -o objunit/ac_monitor_test.o
+"${cxx}" \$COMMON_FLAGS -c ${gtestDir}/googletest/src/gtest-all.cc -o objunit/gtest-all.o
 
-"${cxx}" -I/usr/include ${GTEST_INC} -L/usr/lib -o UT.Binary \
+"${cxx}" -I/usr/include \$GTEST_INC -L/usr/lib -o UT.Binary \
   objunit/test_main.o \
   objunit/main_controller.o \
   objunit/main_controller_test.o \
