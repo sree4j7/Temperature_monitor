@@ -186,11 +186,11 @@ test -x "${TC_DIR}/bin/g++"
                         sh """#!/bin/sh
 set -e
 mkdir -p obj
-"${cxx}" -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c main.cpp -o obj/main.o
-"${cxx}" -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c ac_monitor.cpp -o obj/ac_monitor.o
-"${cxx}" -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c temperature_monitor.cpp -o obj/temperature_monitor.o
-"${cxx}" -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c temperature_sensor.cpp -o obj/temperature_sensor.o
-"${cxx}" -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c main_controller.cpp -o obj/main_controller.o
+"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include -c main.cpp -o obj/main.o
+"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include -c ac_monitor.cpp -o obj/ac_monitor.o
+"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include -c temperature_monitor.cpp -o obj/temperature_monitor.o
+"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include -c temperature_sensor.cpp -o obj/temperature_sensor.o
+"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include -c main_controller.cpp -o obj/main_controller.o
 "${cxx}" -I/usr/include -L/usr/lib -o Binary obj/main.o obj/ac_monitor.o obj/temperature_monitor.o obj/temperature_sensor.o obj/main_controller.o -pthread ${linkFlags}
 """
                     }
@@ -233,7 +233,7 @@ if [ ! -d "${gtestDir}" ]; then
 fi
 
 GTEST_INC="-I${gtestDir}/googletest/include -I${gtestDir}/googletest"
-COMMON_FLAGS="-g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include \$GTEST_INC"
+COMMON_FLAGS="-g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include \$GTEST_INC"
 
 "${cxx}" \$COMMON_FLAGS -c test_main.cpp -o objunit/test_main.o
 "${cxx}" \$COMMON_FLAGS -c main_controller.cpp -o objunit/main_controller.o
