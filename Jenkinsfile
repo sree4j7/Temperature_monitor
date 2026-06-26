@@ -136,10 +136,11 @@ test -x "${TC_DIR}/bin/g++"
 
                                 if (portableReady == 0) {
                                     def ws = pwd()
+                                    def portableCxx = "${ws}/${env.PORTABLE_TC_DIR}/bin/g++"
                                     env.BUILD_MODE = 'portable_gpp'
-                                    env.CXX_BIN = "${ws}/${env.PORTABLE_TC_DIR}/bin/g++"
+                                    env.CXX_BIN = portableCxx
                                     env.CXX_LINK_FLAGS = ''
-                                    sh '"${CXX_BIN}" --version | head -n 1'
+                                    sh "\"${portableCxx}\" --version | head -n 1"
                                     echo 'Using portable user-space C++ toolchain.'
                                 } else {
                                     error('No usable C++ toolchain found. Jenkins user cannot install packages, Docker is unavailable, and portable toolchain bootstrap failed. Preinstall make/g++/gtest on the agent, or enable Docker/sudo/network access for Jenkins.')
@@ -147,6 +148,11 @@ test -x "${TC_DIR}/bin/g++"
                             }
                         }
                     }
+
+                    sh 'mkdir -p .ci'
+                    writeFile file: '.ci/jenkins_build_mode', text: "${env.BUILD_MODE}\n"
+                    writeFile file: '.ci/jenkins_cxx_bin', text: "${env.CXX_BIN}\n"
+                    writeFile file: '.ci/jenkins_link_flags', text: "${env.CXX_LINK_FLAGS}\n"
                 }
             }
         }
@@ -154,18 +160,20 @@ test -x "${TC_DIR}/bin/g++"
         stage('Build Application') {
             steps {
                 script {
-                    if (env.BUILD_MODE == 'docker') {
+                    def buildMode = fileExists('.ci/jenkins_build_mode') ? readFile('.ci/jenkins_build_mode').trim() : env.BUILD_MODE
+                    def cxx = fileExists('.ci/jenkins_cxx_bin') ? readFile('.ci/jenkins_cxx_bin').trim() : (env.CXX_BIN?.trim() ? env.CXX_BIN.trim() : 'g++')
+                    def linkFlags = fileExists('.ci/jenkins_link_flags') ? readFile('.ci/jenkins_link_flags').trim() : (env.CXX_LINK_FLAGS?.trim() ? env.CXX_LINK_FLAGS.trim() : '')
+
+                    if (buildMode == 'docker') {
                         sh '''docker run --rm \
   -v "$PWD":/workspace \
   -w /workspace \
   ${BUILD_IMAGE} \
   bash -lc "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y make libgtest-dev && make clean && make"'''
-                    } else if (env.BUILD_MODE == 'host_make') {
+                    } else if (buildMode == 'host_make') {
                         sh 'make clean'
                         sh 'make'
                     } else {
-                        def cxx = env.CXX_BIN?.trim() ? env.CXX_BIN.trim() : 'g++'
-                        def linkFlags = env.CXX_LINK_FLAGS?.trim() ? env.CXX_LINK_FLAGS.trim() : ''
                         sh """#!/bin/sh
 set -e
 mkdir -p obj
@@ -184,18 +192,20 @@ mkdir -p obj
         stage('Build Unit Tests') {
             steps {
                 script {
-                    if (env.BUILD_MODE == 'docker') {
+                    def buildMode = fileExists('.ci/jenkins_build_mode') ? readFile('.ci/jenkins_build_mode').trim() : env.BUILD_MODE
+                    def cxx = fileExists('.ci/jenkins_cxx_bin') ? readFile('.ci/jenkins_cxx_bin').trim() : (env.CXX_BIN?.trim() ? env.CXX_BIN.trim() : 'g++')
+                    def linkFlags = fileExists('.ci/jenkins_link_flags') ? readFile('.ci/jenkins_link_flags').trim() : (env.CXX_LINK_FLAGS?.trim() ? env.CXX_LINK_FLAGS.trim() : '')
+
+                    if (buildMode == 'docker') {
                         sh '''docker run --rm \
   -v "$PWD":/workspace \
   -w /workspace \
   ${BUILD_IMAGE} \
   bash -lc "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y make libgtest-dev && make -f Makefile.UnitTest clean && make -f Makefile.UnitTest"'''
-                    } else if (env.BUILD_MODE == 'host_make') {
+                    } else if (buildMode == 'host_make') {
                         sh 'make -f Makefile.UnitTest clean'
                         sh 'make -f Makefile.UnitTest'
                     } else {
-                        def cxx = env.CXX_BIN?.trim() ? env.CXX_BIN.trim() : 'g++'
-                        def linkFlags = env.CXX_LINK_FLAGS?.trim() ? env.CXX_LINK_FLAGS.trim() : ''
                         sh """#!/bin/sh
 set -e
 
@@ -246,7 +256,8 @@ COMMON_FLAGS="-g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include ${GTEST_INC}"
         stage('Run Unit Tests') {
             steps {
                 script {
-                    if (env.BUILD_MODE == 'docker') {
+                    def buildMode = fileExists('.ci/jenkins_build_mode') ? readFile('.ci/jenkins_build_mode').trim() : env.BUILD_MODE
+                    if (buildMode == 'docker') {
                         sh '''docker run --rm \
   -v "$PWD":/workspace \
   -w /workspace \
