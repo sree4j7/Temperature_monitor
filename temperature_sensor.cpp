@@ -1,12 +1,12 @@
 /*			HEADER
 *******************************************************************
-***								***
-*** Programmer: Chikkappagari Sreekanth				***
-***								***
-*** File: m_fTemperature_sensor.cpp				***
-***								***
-*** Date: 07/02/2019						***
-***								***
+***																***
+*** Programmer: Chikkappagari Sreekanth							***
+***																***
+*** File: m_fTemperature_sensor.cpp								***
+***																***
+*** Date: 07/02/2019											***
+***																***
 *******************************************************************
 */
 #include"temperature_sensor.h"
@@ -83,3 +83,7 @@ void CTemperatureSensor::sensor_assignData(void)
     }
 }
 
+CTemperatureSensor::~CTemperatureSensor()
+{
+
+}
