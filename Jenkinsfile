@@ -135,10 +135,11 @@ test -x "${TC_DIR}/bin/g++"
 ''', returnStatus: true)
 
                                 if (portableReady == 0) {
+                                    def ws = pwd()
                                     env.BUILD_MODE = 'portable_gpp'
-                                    env.CXX_BIN = "${env.WORKSPACE}/${env.PORTABLE_TC_DIR}/bin/g++"
+                                    env.CXX_BIN = "${ws}/${env.PORTABLE_TC_DIR}/bin/g++"
                                     env.CXX_LINK_FLAGS = ''
-                                    sh '${CXX_BIN} --version | head -n 1'
+                                    sh '"${CXX_BIN}" --version | head -n 1'
                                     echo 'Using portable user-space C++ toolchain.'
                                 } else {
                                     error('No usable C++ toolchain found. Jenkins user cannot install packages, Docker is unavailable, and portable toolchain bootstrap failed. Preinstall make/g++/gtest on the agent, or enable Docker/sudo/network access for Jenkins.')
@@ -159,20 +160,22 @@ test -x "${TC_DIR}/bin/g++"
   -w /workspace \
   ${BUILD_IMAGE} \
   bash -lc "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y make libgtest-dev && make clean && make"'''
-                    } else if (env.BUILD_MODE == 'host_gpp' || env.BUILD_MODE == 'portable_gpp') {
-                        sh '''#!/bin/sh
-set -e
-mkdir -p obj
-${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c main.cpp -o obj/main.o
-${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c ac_monitor.cpp -o obj/ac_monitor.o
-${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c temperature_monitor.cpp -o obj/temperature_monitor.o
-${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c temperature_sensor.cpp -o obj/temperature_sensor.o
-${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c main_controller.cpp -o obj/main_controller.o
-${CXX_BIN} -I/usr/include -L/usr/lib -o Binary obj/main.o obj/ac_monitor.o obj/temperature_monitor.o obj/temperature_sensor.o obj/main_controller.o -pthread ${CXX_LINK_FLAGS}
-'''
-                    } else {
+                    } else if (env.BUILD_MODE == 'host_make') {
                         sh 'make clean'
                         sh 'make'
+                    } else {
+                        def cxx = env.CXX_BIN?.trim() ? env.CXX_BIN.trim() : 'g++'
+                        def linkFlags = env.CXX_LINK_FLAGS?.trim() ? env.CXX_LINK_FLAGS.trim() : ''
+                        sh """#!/bin/sh
+set -e
+mkdir -p obj
+"${cxx}" -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c main.cpp -o obj/main.o
+"${cxx}" -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c ac_monitor.cpp -o obj/ac_monitor.o
+"${cxx}" -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c temperature_monitor.cpp -o obj/temperature_monitor.o
+"${cxx}" -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c temperature_sensor.cpp -o obj/temperature_sensor.o
+"${cxx}" -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c main_controller.cpp -o obj/main_controller.o
+"${cxx}" -I/usr/include -L/usr/lib -o Binary obj/main.o obj/ac_monitor.o obj/temperature_monitor.o obj/temperature_sensor.o obj/main_controller.o -pthread ${linkFlags}
+"""
                     }
                 }
             }
@@ -187,8 +190,13 @@ ${CXX_BIN} -I/usr/include -L/usr/lib -o Binary obj/main.o obj/ac_monitor.o obj/t
   -w /workspace \
   ${BUILD_IMAGE} \
   bash -lc "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y make libgtest-dev && make -f Makefile.UnitTest clean && make -f Makefile.UnitTest"'''
-                    } else if (env.BUILD_MODE == 'host_gpp' || env.BUILD_MODE == 'portable_gpp') {
-                        sh '''#!/bin/sh
+                    } else if (env.BUILD_MODE == 'host_make') {
+                        sh 'make -f Makefile.UnitTest clean'
+                        sh 'make -f Makefile.UnitTest'
+                    } else {
+                        def cxx = env.CXX_BIN?.trim() ? env.CXX_BIN.trim() : 'g++'
+                        def linkFlags = env.CXX_LINK_FLAGS?.trim() ? env.CXX_LINK_FLAGS.trim() : ''
+                        sh """#!/bin/sh
 set -e
 
 mkdir -p objunit
@@ -206,18 +214,18 @@ fi
 GTEST_INC="-I${GTEST_DIR}/googletest/include -I${GTEST_DIR}/googletest"
 COMMON_FLAGS="-g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include ${GTEST_INC}"
 
-${CXX_BIN} ${COMMON_FLAGS} -c test_main.cpp -o objunit/test_main.o
-${CXX_BIN} ${COMMON_FLAGS} -c main_controller.cpp -o objunit/main_controller.o
-${CXX_BIN} ${COMMON_FLAGS} -c main_controller_test.cpp -o objunit/main_controller_test.o
-${CXX_BIN} ${COMMON_FLAGS} -c temperature_monitor.cpp -o objunit/temperature_monitor.o
-${CXX_BIN} ${COMMON_FLAGS} -c temp_monitor_test.cpp -o objunit/temp_monitor_test.o
-${CXX_BIN} ${COMMON_FLAGS} -c temperature_sensor.cpp -o objunit/temperature_sensor.o
-${CXX_BIN} ${COMMON_FLAGS} -c temp_sensor_test.cpp -o objunit/temp_sensor_test.o
-${CXX_BIN} ${COMMON_FLAGS} -c ac_monitor.cpp -o objunit/ac_monitor.o
-${CXX_BIN} ${COMMON_FLAGS} -c ac_monitor_test.cpp -o objunit/ac_monitor_test.o
-${CXX_BIN} ${COMMON_FLAGS} -c ${GTEST_DIR}/googletest/src/gtest-all.cc -o objunit/gtest-all.o
+"${cxx}" ${COMMON_FLAGS} -c test_main.cpp -o objunit/test_main.o
+"${cxx}" ${COMMON_FLAGS} -c main_controller.cpp -o objunit/main_controller.o
+"${cxx}" ${COMMON_FLAGS} -c main_controller_test.cpp -o objunit/main_controller_test.o
+"${cxx}" ${COMMON_FLAGS} -c temperature_monitor.cpp -o objunit/temperature_monitor.o
+"${cxx}" ${COMMON_FLAGS} -c temp_monitor_test.cpp -o objunit/temp_monitor_test.o
+"${cxx}" ${COMMON_FLAGS} -c temperature_sensor.cpp -o objunit/temperature_sensor.o
+"${cxx}" ${COMMON_FLAGS} -c temp_sensor_test.cpp -o objunit/temp_sensor_test.o
+"${cxx}" ${COMMON_FLAGS} -c ac_monitor.cpp -o objunit/ac_monitor.o
+"${cxx}" ${COMMON_FLAGS} -c ac_monitor_test.cpp -o objunit/ac_monitor_test.o
+"${cxx}" ${COMMON_FLAGS} -c ${GTEST_DIR}/googletest/src/gtest-all.cc -o objunit/gtest-all.o
 
-${CXX_BIN} -I/usr/include ${GTEST_INC} -L/usr/lib -o UT.Binary \
+"${cxx}" -I/usr/include ${GTEST_INC} -L/usr/lib -o UT.Binary \
   objunit/test_main.o \
   objunit/main_controller.o \
   objunit/main_controller_test.o \
@@ -228,11 +236,8 @@ ${CXX_BIN} -I/usr/include ${GTEST_INC} -L/usr/lib -o UT.Binary \
   objunit/ac_monitor.o \
   objunit/ac_monitor_test.o \
   objunit/gtest-all.o \
-    -pthread ${CXX_LINK_FLAGS}
-'''
-                    } else {
-                        sh 'make -f Makefile.UnitTest clean'
-                        sh 'make -f Makefile.UnitTest'
+    -pthread ${linkFlags}
+"""
                     }
                 }
             }
