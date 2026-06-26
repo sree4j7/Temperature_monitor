@@ -8,16 +8,38 @@ pipeline {
     environment {
         BUILD_MODE = 'host'
         BUILD_IMAGE = 'gcc:13'
+        GTEST_DIR = '.ci/googletest'
+        CXX_BIN = 'g++'
     }
 
     stages {
         stage('Setup Build Environment') {
             steps {
                 script {
-                    def hostReady = (sh(script: 'command -v make >/dev/null 2>&1 && command -v g++ >/dev/null 2>&1', returnStatus: true) == 0)
-                    if (hostReady) {
-                        env.BUILD_MODE = 'host'
-                        sh 'make --version | head -n 1; g++ --version | head -n 1'
+                    def compilerBin = sh(script: '''#!/bin/sh
+if command -v g++ >/dev/null 2>&1; then
+    echo g++
+elif command -v c++ >/dev/null 2>&1; then
+    echo c++
+elif command -v clang++ >/dev/null 2>&1; then
+    echo clang++
+else
+    echo none
+fi
+''', returnStdout: true).trim()
+
+                    def hostMakeReady = (sh(script: "command -v make >/dev/null 2>&1 && command -v ${compilerBin} >/dev/null 2>&1", returnStatus: true) == 0)
+                    def hostGppReady = (compilerBin != 'none')
+
+                    if (hostMakeReady) {
+                        env.CXX_BIN = compilerBin
+                        env.BUILD_MODE = 'host_make'
+                        sh 'make --version | head -n 1'
+                        sh '${CXX_BIN} --version | head -n 1'
+                    } else if (hostGppReady) {
+                        env.CXX_BIN = compilerBin
+                        env.BUILD_MODE = 'host_gpp'
+                        sh '${CXX_BIN} --version | head -n 1'
                     } else {
                         def installed = sh(script: '''#!/bin/sh
 set -e
@@ -63,7 +85,8 @@ command -v make >/dev/null 2>&1 && command -v g++ >/dev/null 2>&1
 ''', returnStatus: true)
 
                         if (installed == 0) {
-                            env.BUILD_MODE = 'host'
+                            env.CXX_BIN = 'g++'
+                            env.BUILD_MODE = 'host_make'
                             sh 'make --version | head -n 1; g++ --version | head -n 1'
                         } else {
                             def dockerReady = (sh(script: 'command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1', returnStatus: true) == 0)
@@ -89,6 +112,17 @@ command -v make >/dev/null 2>&1 && command -v g++ >/dev/null 2>&1
   -w /workspace \
   ${BUILD_IMAGE} \
   bash -lc "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y make libgtest-dev && make clean && make"'''
+                    } else if (env.BUILD_MODE == 'host_gpp') {
+                        sh '''#!/bin/sh
+set -e
+mkdir -p obj
+${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c main.cpp -o obj/main.o
+${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c ac_monitor.cpp -o obj/ac_monitor.o
+${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c temperature_monitor.cpp -o obj/temperature_monitor.o
+${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c temperature_sensor.cpp -o obj/temperature_sensor.o
+${CXX_BIN} -g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include -c main_controller.cpp -o obj/main_controller.o
+${CXX_BIN} -I/usr/include -L/usr/lib -o Binary obj/main.o obj/ac_monitor.o obj/temperature_monitor.o obj/temperature_sensor.o obj/main_controller.o -pthread
+'''
                     } else {
                         sh 'make clean'
                         sh 'make'
@@ -106,6 +140,49 @@ command -v make >/dev/null 2>&1 && command -v g++ >/dev/null 2>&1
   -w /workspace \
   ${BUILD_IMAGE} \
   bash -lc "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y make libgtest-dev && make -f Makefile.UnitTest clean && make -f Makefile.UnitTest"'''
+                    } else if (env.BUILD_MODE == 'host_gpp') {
+                        sh '''#!/bin/sh
+set -e
+
+mkdir -p objunit
+mkdir -p .ci
+
+if [ ! -d "${GTEST_DIR}" ]; then
+    if command -v git >/dev/null 2>&1; then
+        git clone --depth 1 https://github.com/google/googletest.git "${GTEST_DIR}"
+    else
+        echo "ERROR: git is required to fetch GoogleTest source in host_gpp mode."
+        exit 1
+    fi
+fi
+
+GTEST_INC="-I${GTEST_DIR}/googletest/include -I${GTEST_DIR}/googletest"
+COMMON_FLAGS="-g -std=c++0x -Wall -Wextra -W -O0 -I/usr/include ${GTEST_INC}"
+
+${CXX_BIN} ${COMMON_FLAGS} -c test_main.cpp -o objunit/test_main.o
+${CXX_BIN} ${COMMON_FLAGS} -c main_controller.cpp -o objunit/main_controller.o
+${CXX_BIN} ${COMMON_FLAGS} -c main_controller_test.cpp -o objunit/main_controller_test.o
+${CXX_BIN} ${COMMON_FLAGS} -c temperature_monitor.cpp -o objunit/temperature_monitor.o
+${CXX_BIN} ${COMMON_FLAGS} -c temp_monitor_test.cpp -o objunit/temp_monitor_test.o
+${CXX_BIN} ${COMMON_FLAGS} -c temperature_sensor.cpp -o objunit/temperature_sensor.o
+${CXX_BIN} ${COMMON_FLAGS} -c temp_sensor_test.cpp -o objunit/temp_sensor_test.o
+${CXX_BIN} ${COMMON_FLAGS} -c ac_monitor.cpp -o objunit/ac_monitor.o
+${CXX_BIN} ${COMMON_FLAGS} -c ac_monitor_test.cpp -o objunit/ac_monitor_test.o
+${CXX_BIN} ${COMMON_FLAGS} -c ${GTEST_DIR}/googletest/src/gtest-all.cc -o objunit/gtest-all.o
+
+${CXX_BIN} -I/usr/include ${GTEST_INC} -L/usr/lib -o UT.Binary \
+  objunit/test_main.o \
+  objunit/main_controller.o \
+  objunit/main_controller_test.o \
+  objunit/temperature_monitor.o \
+  objunit/temp_monitor_test.o \
+  objunit/temperature_sensor.o \
+  objunit/temp_sensor_test.o \
+  objunit/ac_monitor.o \
+  objunit/ac_monitor_test.o \
+  objunit/gtest-all.o \
+  -pthread
+'''
                     } else {
                         sh 'make -f Makefile.UnitTest clean'
                         sh 'make -f Makefile.UnitTest'
