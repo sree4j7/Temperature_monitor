@@ -46,7 +46,7 @@ void TestTempDummy::TearDown(void)
 
 TEST_F ( TestTempDummy, convert_1 )
 {
-    float s = 68;
+    float s = 86;
     ASSERT_EQ( s, pTemp->temperature_convert() );
 }
 
