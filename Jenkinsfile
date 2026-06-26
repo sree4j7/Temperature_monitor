@@ -18,6 +18,10 @@ pipeline {
         stage('Setup Build Environment') {
             steps {
                 script {
+                    def resolvedBuildMode = 'host_make'
+                    def resolvedCxx = 'g++'
+                    def resolvedLinkFlags = ''
+
                     def compilerBin = sh(script: '''#!/bin/sh
 if command -v g++ >/dev/null 2>&1; then
     echo g++
@@ -36,16 +40,16 @@ fi
                     def hostGppReady = (compilerBin != 'none')
 
                     if (hostMakeReady) {
-                        env.CXX_BIN = compilerBin
-                        env.CXX_LINK_FLAGS = ''
-                        env.BUILD_MODE = 'host_make'
+                        resolvedCxx = compilerBin
+                        resolvedLinkFlags = ''
+                        resolvedBuildMode = 'host_make'
                         sh 'make --version | head -n 1'
-                        sh '${CXX_BIN} --version | head -n 1'
+                        sh "${resolvedCxx} --version | head -n 1"
                     } else if (hostGppReady) {
-                        env.CXX_BIN = compilerBin
-                        env.CXX_LINK_FLAGS = (compilerBin == 'gcc') ? '-lstdc++' : ''
-                        env.BUILD_MODE = 'host_gpp'
-                        sh '${CXX_BIN} --version | head -n 1'
+                        resolvedCxx = compilerBin
+                        resolvedLinkFlags = (compilerBin == 'gcc') ? '-lstdc++' : ''
+                        resolvedBuildMode = 'host_gpp'
+                        sh "${resolvedCxx} --version | head -n 1"
                     } else {
                         def installed = sh(script: '''#!/bin/sh
 set -e
@@ -91,14 +95,14 @@ command -v make >/dev/null 2>&1 && command -v g++ >/dev/null 2>&1
 ''', returnStatus: true)
 
                         if (installed == 0) {
-                            env.CXX_BIN = 'g++'
-                            env.CXX_LINK_FLAGS = ''
-                            env.BUILD_MODE = 'host_make'
+                            resolvedCxx = 'g++'
+                            resolvedLinkFlags = ''
+                            resolvedBuildMode = 'host_make'
                             sh 'make --version | head -n 1; g++ --version | head -n 1'
                         } else {
                             def dockerReady = (sh(script: 'command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1', returnStatus: true) == 0)
                             if (dockerReady) {
-                                env.BUILD_MODE = 'docker'
+                                resolvedBuildMode = 'docker'
                                 sh 'docker pull ${BUILD_IMAGE}'
                                 echo 'Host toolchain unavailable and no install privileges; using Docker build mode.'
                             } else {
@@ -137,9 +141,9 @@ test -x "${TC_DIR}/bin/g++"
                                 if (portableReady == 0) {
                                     def ws = pwd()
                                     def portableCxx = "${ws}/${env.PORTABLE_TC_DIR}/bin/g++"
-                                    env.BUILD_MODE = 'portable_gpp'
-                                    env.CXX_BIN = portableCxx
-                                    env.CXX_LINK_FLAGS = ''
+                                    resolvedBuildMode = 'portable_gpp'
+                                    resolvedCxx = portableCxx
+                                    resolvedLinkFlags = ''
                                     sh "\"${portableCxx}\" --version | head -n 1"
                                     echo 'Using portable user-space C++ toolchain.'
                                 } else {
@@ -149,10 +153,14 @@ test -x "${TC_DIR}/bin/g++"
                         }
                     }
 
+                    env.BUILD_MODE = resolvedBuildMode
+                    env.CXX_BIN = resolvedCxx
+                    env.CXX_LINK_FLAGS = resolvedLinkFlags
+
                     sh 'mkdir -p .ci'
-                    writeFile file: '.ci/jenkins_build_mode', text: "${env.BUILD_MODE}\n"
-                    writeFile file: '.ci/jenkins_cxx_bin', text: "${env.CXX_BIN}\n"
-                    writeFile file: '.ci/jenkins_link_flags', text: "${env.CXX_LINK_FLAGS}\n"
+                    writeFile file: '.ci/jenkins_build_mode', text: "${resolvedBuildMode}\n"
+                    writeFile file: '.ci/jenkins_cxx_bin', text: "${resolvedCxx}\n"
+                    writeFile file: '.ci/jenkins_link_flags', text: "${resolvedLinkFlags}\n"
                 }
             }
         }
@@ -163,6 +171,7 @@ test -x "${TC_DIR}/bin/g++"
                     def buildMode = fileExists('.ci/jenkins_build_mode') ? readFile('.ci/jenkins_build_mode').trim() : env.BUILD_MODE
                     def cxx = fileExists('.ci/jenkins_cxx_bin') ? readFile('.ci/jenkins_cxx_bin').trim() : (env.CXX_BIN?.trim() ? env.CXX_BIN.trim() : 'g++')
                     def linkFlags = fileExists('.ci/jenkins_link_flags') ? readFile('.ci/jenkins_link_flags').trim() : (env.CXX_LINK_FLAGS?.trim() ? env.CXX_LINK_FLAGS.trim() : '')
+                    echo "BuildApplication mode=${buildMode}, cxx=${cxx}"
 
                     if (buildMode == 'docker') {
                         sh '''docker run --rm \
@@ -195,6 +204,7 @@ mkdir -p obj
                     def buildMode = fileExists('.ci/jenkins_build_mode') ? readFile('.ci/jenkins_build_mode').trim() : env.BUILD_MODE
                     def cxx = fileExists('.ci/jenkins_cxx_bin') ? readFile('.ci/jenkins_cxx_bin').trim() : (env.CXX_BIN?.trim() ? env.CXX_BIN.trim() : 'g++')
                     def linkFlags = fileExists('.ci/jenkins_link_flags') ? readFile('.ci/jenkins_link_flags').trim() : (env.CXX_LINK_FLAGS?.trim() ? env.CXX_LINK_FLAGS.trim() : '')
+                    echo "BuildUnitTests mode=${buildMode}, cxx=${cxx}"
 
                     if (buildMode == 'docker') {
                         sh '''docker run --rm \
