@@ -11,6 +11,7 @@ pipeline {
         GTEST_DIR = '.ci/googletest'
         PORTABLE_TC_DIR = '.ci/toolchain'
         CXX_BIN = 'g++'
+        CXX_EXTRA_FLAGS = ''
         CXX_LINK_FLAGS = ''
     }
 
@@ -20,6 +21,7 @@ pipeline {
                 script {
                     def resolvedBuildMode = 'host_make'
                     def resolvedCxx = 'g++'
+                    def resolvedExtraFlags = ''
                     def resolvedLinkFlags = ''
 
                     def compilerBin = sh(script: '''#!/bin/sh
@@ -36,17 +38,19 @@ else
 fi
 ''', returnStdout: true).trim()
 
-                    def hostMakeReady = (compilerBin != 'gcc' && sh(script: "command -v make >/dev/null 2>&1 && command -v ${compilerBin} >/dev/null 2>&1", returnStatus: true) == 0)
+                    def hostMakeReady = (compilerBin != 'none' && compilerBin != 'gcc' && sh(script: "command -v make >/dev/null 2>&1 && command -v ${compilerBin} >/dev/null 2>&1", returnStatus: true) == 0)
                     def hostGppReady = (compilerBin != 'none')
 
                     if (hostMakeReady) {
                         resolvedCxx = compilerBin
+                        resolvedExtraFlags = ''
                         resolvedLinkFlags = ''
                         resolvedBuildMode = 'host_make'
                         sh 'make --version | head -n 1'
                         sh "${resolvedCxx} --version | head -n 1"
                     } else if (hostGppReady) {
                         resolvedCxx = compilerBin
+                        resolvedExtraFlags = ''
                         resolvedLinkFlags = (compilerBin == 'gcc') ? '-lstdc++' : ''
                         resolvedBuildMode = 'host_gpp'
                         sh "${resolvedCxx} --version | head -n 1"
@@ -96,6 +100,7 @@ command -v make >/dev/null 2>&1 && command -v g++ >/dev/null 2>&1
 
                         if (installed == 0) {
                             resolvedCxx = 'g++'
+                            resolvedExtraFlags = ''
                             resolvedLinkFlags = ''
                             resolvedBuildMode = 'host_make'
                             sh 'make --version | head -n 1; g++ --version | head -n 1'
@@ -143,7 +148,8 @@ test -x "${TC_DIR}/bin/g++"
                                     def portableCxx = "${ws}/${env.PORTABLE_TC_DIR}/bin/g++"
                                     resolvedBuildMode = 'portable_gpp'
                                     resolvedCxx = portableCxx
-                                    resolvedLinkFlags = '-static'
+                                    resolvedExtraFlags = '-fno-pie'
+                                    resolvedLinkFlags = '-static -no-pie'
                                     sh "\"${portableCxx}\" --version | head -n 1"
                                     echo 'Using portable user-space C++ toolchain.'
                                 } else {
@@ -155,11 +161,13 @@ test -x "${TC_DIR}/bin/g++"
 
                     env.BUILD_MODE = resolvedBuildMode
                     env.CXX_BIN = resolvedCxx
+                    env.CXX_EXTRA_FLAGS = resolvedExtraFlags
                     env.CXX_LINK_FLAGS = resolvedLinkFlags
 
                     sh 'mkdir -p .ci'
                     writeFile file: '.ci/jenkins_build_mode', text: "${resolvedBuildMode}\n"
                     writeFile file: '.ci/jenkins_cxx_bin', text: "${resolvedCxx}\n"
+                    writeFile file: '.ci/jenkins_extra_flags', text: "${resolvedExtraFlags}\n"
                     writeFile file: '.ci/jenkins_link_flags', text: "${resolvedLinkFlags}\n"
                 }
             }
@@ -170,6 +178,7 @@ test -x "${TC_DIR}/bin/g++"
                 script {
                     def buildMode = fileExists('.ci/jenkins_build_mode') ? readFile('.ci/jenkins_build_mode').trim() : env.BUILD_MODE
                     def cxx = fileExists('.ci/jenkins_cxx_bin') ? readFile('.ci/jenkins_cxx_bin').trim() : (env.CXX_BIN?.trim() ? env.CXX_BIN.trim() : 'g++')
+                    def extraFlags = fileExists('.ci/jenkins_extra_flags') ? readFile('.ci/jenkins_extra_flags').trim() : (env.CXX_EXTRA_FLAGS?.trim() ? env.CXX_EXTRA_FLAGS.trim() : '')
                     def linkFlags = fileExists('.ci/jenkins_link_flags') ? readFile('.ci/jenkins_link_flags').trim() : (env.CXX_LINK_FLAGS?.trim() ? env.CXX_LINK_FLAGS.trim() : '')
                     echo "BuildApplication mode=${buildMode}, cxx=${cxx}"
 
@@ -186,11 +195,11 @@ test -x "${TC_DIR}/bin/g++"
                         sh """#!/bin/sh
 set -e
 mkdir -p obj
-"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include -c main.cpp -o obj/main.o
-"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include -c ac_monitor.cpp -o obj/ac_monitor.o
-"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include -c temperature_monitor.cpp -o obj/temperature_monitor.o
-"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include -c temperature_sensor.cpp -o obj/temperature_sensor.o
-"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include -c main_controller.cpp -o obj/main_controller.o
+"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 ${extraFlags} -I/usr/include -c main.cpp -o obj/main.o
+"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 ${extraFlags} -I/usr/include -c ac_monitor.cpp -o obj/ac_monitor.o
+"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 ${extraFlags} -I/usr/include -c temperature_monitor.cpp -o obj/temperature_monitor.o
+"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 ${extraFlags} -I/usr/include -c temperature_sensor.cpp -o obj/temperature_sensor.o
+"${cxx}" -g -std=c++17 -Wall -Wextra -W -O0 ${extraFlags} -I/usr/include -c main_controller.cpp -o obj/main_controller.o
 "${cxx}" -I/usr/include -L/usr/lib -o Binary obj/main.o obj/ac_monitor.o obj/temperature_monitor.o obj/temperature_sensor.o obj/main_controller.o -pthread ${linkFlags}
 """
                     }
@@ -203,6 +212,7 @@ mkdir -p obj
                 script {
                     def buildMode = fileExists('.ci/jenkins_build_mode') ? readFile('.ci/jenkins_build_mode').trim() : env.BUILD_MODE
                     def cxx = fileExists('.ci/jenkins_cxx_bin') ? readFile('.ci/jenkins_cxx_bin').trim() : (env.CXX_BIN?.trim() ? env.CXX_BIN.trim() : 'g++')
+                    def extraFlags = fileExists('.ci/jenkins_extra_flags') ? readFile('.ci/jenkins_extra_flags').trim() : (env.CXX_EXTRA_FLAGS?.trim() ? env.CXX_EXTRA_FLAGS.trim() : '')
                     def linkFlags = fileExists('.ci/jenkins_link_flags') ? readFile('.ci/jenkins_link_flags').trim() : (env.CXX_LINK_FLAGS?.trim() ? env.CXX_LINK_FLAGS.trim() : '')
                     echo "BuildUnitTests mode=${buildMode}, cxx=${cxx}"
 
@@ -233,7 +243,7 @@ if [ ! -d "${gtestDir}" ]; then
 fi
 
 GTEST_INC="-I${gtestDir}/googletest/include -I${gtestDir}/googletest"
-COMMON_FLAGS="-g -std=c++17 -Wall -Wextra -W -O0 -I/usr/include \$GTEST_INC"
+COMMON_FLAGS="-g -std=c++17 -Wall -Wextra -W -O0 ${extraFlags} -I/usr/include \$GTEST_INC"
 
 "${cxx}" \$COMMON_FLAGS -c test_main.cpp -o objunit/test_main.o
 "${cxx}" \$COMMON_FLAGS -c main_controller.cpp -o objunit/main_controller.o
@@ -297,6 +307,9 @@ else
     echo "ERROR: UT.Binary exists but could not be executed."
     echo "Binary metadata:"
     file ./UT.Binary || true
+    echo "Execution error output:"
+    ./UT.Binary > /tmp/ut.out 2> /tmp/ut.err || true
+    cat /tmp/ut.err || true
     exit 1
 fi
 '''
